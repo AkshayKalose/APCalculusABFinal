@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>AP Calculus AB 2nd Semester Final Project | Akshay Kalose</title>
+  </head>
+  <body>
+    <div id="positionChart" style="height: 200px; width:30%; float: right; clear: right;"></div>
+    <div id="velocityChart" style="height: 200px; width:30%; float: right; clear: right;"></div>
+    <div id="accelerationChart" style="height: 200px; width:30%; float: right; clear: right;"></div>
+    <script src="./jquery-2.1.4.min.js"></script>
+    <script src="./canvasjs.min.js"></script>
+    <script src="./matter-0.8.0.min.js"></script>
+    <script>
+      $(window).ready(function() {
+        // Matter.js module aliases
+        var Engine = Matter.Engine,
+            World = Matter.World,
+            Bodies = Matter.Bodies,
+            Events = Matter.Events,
+            Body = Matter.Body,
+            Bounds = Matter.Bounds;
+
+        // create a Matter.js engine
+        var engine = Engine.create(document.body, {render: {options: {wireframes: false, background: '#000000'}}});
+
+        // Invert Gravity.
+        engine.world.gravity.y = -1;
+
+        // Initiaalize Bodies
+        var ground = Bodies.rectangle(400, -4200, 810, 60, { isStatic: true });
+
+        var background = Bodies.rectangle(400, -1800, 800, 4800, {
+              render: {
+                sprite: {
+                  texture: './background.png'
+                }
+              }
+            });
+
+        var canvas_context = $('canvas')[0].getContext("2d");
+
+        var rocket = new Image();
+        rocket.src = './rocket.png';
+
+        var fire = new Image();
+        fire.src = './fire.png';
+
+        var buttonPressed = false;
+
+        // add all of the bodies to the world
+        World.add(engine.world, [ground, background]);
+
+        Events.on(engine, 'tick', function() {
+
+          positions.push({
+            x: xVal,
+            y: background.position.y + 1770
+          });
+
+          // Plot Average Rate of Change
+          if (xVal < 500) {
+            velocities.push({
+              x: xVal - 5,
+              y: (positions[xVal].y - ((xVal < 10) ? 0 : positions[xVal - 10].y)) / 10
+            });
+
+            accelerations.push({
+              x: xVal - 10,
+              y: (velocities[xVal].y - ((xVal < 10) ? 0 : velocities[xVal - 10].y)) / 10
+            });
+          } else {
+            var velocity = (positions[499].y - positions[489].y) / 10;
+            velocities.push({
+              x: xVal - 5,
+              // if velocity very close to 0, make it 0 so line is smooth.
+              y: Math.abs(velocity) < 0.001 ? 0 : velocity
+            });
+
+            accelerations.push({
+              x: xVal - 10,
+              y: (velocities[499 - 5].y - velocities[499 - 15].y) / 10
+            });
+          }
+
+          if (positions.length > dataLength) {
+            positions.shift();
+            velocities.shift();
+            accelerations.shift();
+          }
+
+          // Render Charts
+          positionChart.render();
+          velocityChart.render();
+          accelerationChart.render();
+
+          xVal++;
+
+        });
+
+        Events.on(engine, 'afterRender', function() {
+          // Draw Rocket with Fire (if button pressed) on canvas.
+          if (buttonPressed) {
+            canvas_context.drawImage(fire, 400 - 160 / 2, 240, 160, 320);
+          }
+          canvas_context.drawImage(rocket, 400 - 160 / 2, 240, 160, 320);
+        });
+
+        window.addEventListener("keydown", function() {
+          buttonPressed = true;
+          Body.applyForce(background, {x:0,y:0}, {x: 0,y:10});
+        });
+
+        window.addEventListener("keyup", function() {
+          buttonPressed = false;
+        });
+
+
+        // Initiaalize Charts
+
+        var positions = []; // Position Data Points
+        var velocities = []; // Velocity Data Points
+        var accelerations = []; // Acceleration Data Points
+
+        var positionChart = new CanvasJS.Chart("positionChart",{
+          title :{
+            text: "Position"
+          },
+          data: [{
+            type: "line",
+            dataPoints: positions
+          }]
+        });
+
+        var velocityChart = new CanvasJS.Chart("velocityChart",{
+          title :{
+            text: "Velocity"
+          },
+          data: [{
+            type: "line",
+            dataPoints: velocities
+          }]
+        });
+
+        var accelerationChart = new CanvasJS.Chart("accelerationChart",{
+          title :{
+            text: "Acceleration"
+          },
+          data: [{
+            type: "line",
+            dataPoints: accelerations
+          }]
+        });
+
+        var xVal = 0; // starting x-value of chart to start graphing.
+        var dataLength = 500; // number of dataPoints visible at any point
+
+
+
+        // run the engine
+        Engine.run(engine);
+
+      });
+    </script>
+  </body>
+</html>
